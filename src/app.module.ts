@@ -1,3 +1,8 @@
+/**
+ * ⚙️ Module racine MS Express
+ * ──────────────────────────
+ */
+
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -5,72 +10,55 @@ import { JwtModule } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
 
 import configuration from './config/configuration';
-import { getDatabaseConfig } from './config/typeorm.config';
 import { getJwtConfig } from './config/jwt.config';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrdersModule } from './modules/orders/orders.module';
-import { CommissionsModule } from './modules/commissions/commissions.module';
 import { ChatsModule } from './modules/chats/chats.module';
 import { RatingsModule } from './modules/ratings/ratings.module';
+import { CommissionsModule } from './modules/commissions/commissions.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
-
 @Module({
   imports: [
+    // ─── Configuration ────────────────────────
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
       envFilePath: ['.env', '.env.local'],
     }),
 
-@Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [configuration],
-      envFilePath: ['.env', '.env.local'],
-    }),
-
-     // ... (tes autres imports)
-
-
-
-
-    // ✅ CONFIGURATION POUR RENDER / POSTGRES
+    // ─── Base de données ──────────────────────
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const isProd = configService.get('nodeEnv') === 'production';
-        
-        // En production sur Render, on utilise DATABASE_URL
+
+        // PRODUCTION (Render) : PostgreSQL
         if (isProd && process.env.DATABASE_URL) {
           return {
             type: 'postgres',
             url: process.env.DATABASE_URL,
             entities: [__dirname + '/**/*.entity{.ts,.js}'],
-            synchronize: true, // ⚠️ À mettre à false plus tard et utiliser des migrations
+            synchronize: true,
             ssl: {
-              rejectUnauthorized: false, // Obligatoire pour Render
+              rejectUnauthorized: false,
             },
-          };
+          } as any;
         }
 
-        // En local (dev), on garde SQLite
+        // DÉVELOPPEMENT (Local) : SQLite
         return {
           type: 'sqlite',
           database: './data/ms-express.sqlite',
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: true,
-        };
+        } as any;
       },
     }),
-    // ... (le reste de tes modules)
-  ],
-})
-export class AppModule {}
 
+    // ─── JWT ──────────────────────────────────
     JwtModule.registerAsync({
       global: true,
       inject: [ConfigService],
@@ -78,6 +66,7 @@ export class AppModule {}
         getJwtConfig(configService),
     }),
 
+    // ─── Modules métier ───────────────────────
     UsersModule,
     AuthModule,
     OrdersModule,
