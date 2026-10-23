@@ -1,8 +1,7 @@
 /**
  * 💰 Entité Commission
  * ───────────────────
- * Enregistre la commission de 35% que le livreur doit à MS Express
- * pour chaque commande livrée.
+ * Commission de 35% que le livreur doit à MS Express.
  */
 
 import {
@@ -20,9 +19,9 @@ import { User } from '../users/user.entity';
 import { Order } from '../orders/order.entity';
 
 export enum CommissionStatus {
-  PENDING = 'pending',       // Due, non payée
-  PAID = 'paid',             // Payée
-  CANCELLED = 'cancelled',   // Annulée (litige, remboursement)
+  PENDING = 'pending',
+  PAID = 'paid',
+  CANCELLED = 'cancelled',
 }
 
 @Entity('commissions')
@@ -49,26 +48,23 @@ export class Commission {
   @Column({ type: 'uuid' })
   orderId: string;
 
-  @ApiProperty({ description: 'Référence de la commande', example: 'MS-4821' })
+  @ApiProperty({ description: 'Référence de la commande' })
   @Column({ type: 'varchar', length: 20 })
   orderReference: string;
 
-  @ApiProperty({ description: 'Montant total de la course', example: 1000 })
+  @ApiProperty({ description: 'Montant total de la course' })
   @Column({ type: 'int' })
   orderTotal: number;
 
-  @ApiProperty({ description: 'Taux de commission (%)', example: 35 })
+  @ApiProperty({ description: 'Taux de commission (%)' })
   @Column({ type: 'float', default: 35 })
   rate: number;
 
-  @ApiProperty({ description: 'Montant de la commission', example: 350 })
+  @ApiProperty({ description: 'Montant de la commission' })
   @Column({ type: 'int' })
   amount: number;
 
-  @ApiProperty({
-    enum: CommissionStatus,
-    example: CommissionStatus.PENDING,
-  })
+  @ApiProperty({ enum: CommissionStatus })
   @Index()
   @Column({
     type: 'varchar',
@@ -78,11 +74,11 @@ export class Commission {
   status: CommissionStatus;
 
   @ApiProperty({ description: 'Date de livraison' })
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   deliveredAt: Date;
 
   @ApiProperty({ description: 'Date de paiement', required: false })
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   paidAt?: Date;
 
   @ApiProperty({ description: 'Méthode de paiement', required: false })

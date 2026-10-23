@@ -1,7 +1,6 @@
 /**
  * 💬 Entité Message
  * ────────────────
- * Un message dans une conversation.
  */
 
 import {
@@ -50,15 +49,15 @@ export class Message {
   @Column({ type: 'uuid', nullable: true })
   senderId?: string;
 
-  @ApiProperty({ enum: MessageSender, example: MessageSender.CLIENT })
+  @ApiProperty({ enum: MessageSender })
   @Column({ type: 'varchar', length: 20 })
   senderType: MessageSender;
 
-  @ApiProperty({ description: 'Contenu du message', example: 'Bonjour !' })
+  @ApiProperty({ description: 'Contenu du message' })
   @Column({ type: 'text' })
   text: string;
 
-  @ApiProperty({ enum: MessageStatus, example: MessageStatus.SENT })
+  @ApiProperty({ enum: MessageStatus })
   @Column({ type: 'varchar', length: 20, default: MessageStatus.SENT })
   status: MessageStatus;
 

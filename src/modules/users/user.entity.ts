@@ -2,6 +2,7 @@
  * 👤 Entité User
  * ─────────────
  * Représente un utilisateur de MS Express.
+ * Compatible PostgreSQL + SQLite.
  */
 
 import {
@@ -70,7 +71,7 @@ export class User {
   isOnline: boolean;
 
   @ApiProperty({ description: 'Dernière activité', required: false })
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastSeenAt?: Date;
 
   @ApiProperty({ description: 'Type de véhicule', required: false })
@@ -95,7 +96,7 @@ export class User {
   notificationsEnabled: boolean;
 
   @ApiProperty({ description: 'Dernière mise à jour du token', required: false })
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   pushTokenUpdatedAt?: Date;
 
   // ─── Mot de passe ───────────────────────────

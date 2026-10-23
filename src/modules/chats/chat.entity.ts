@@ -1,7 +1,6 @@
 /**
  * 💬 Entité Chat (Conversation)
  * ────────────────────────────
- * Une conversation entre un client et un livreur.
  */
 
 import {
@@ -49,11 +48,11 @@ export class Chat {
   @Column({ type: 'uuid', nullable: true })
   orderId?: string;
 
-  @ApiProperty({ description: 'Nombre de messages non lus par le client', default: 0 })
+  @ApiProperty({ description: 'Non lus par le client', default: 0 })
   @Column({ type: 'int', default: 0 })
   clientUnreadCount: number;
 
-  @ApiProperty({ description: 'Nombre de messages non lus par le livreur', default: 0 })
+  @ApiProperty({ description: 'Non lus par le livreur', default: 0 })
   @Column({ type: 'int', default: 0 })
   courierUnreadCount: number;
 
@@ -71,6 +70,6 @@ export class Chat {
   updatedAt: Date;
 
   @ApiProperty({ description: 'Dernier message', required: false })
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   lastMessageAt?: Date;
 }

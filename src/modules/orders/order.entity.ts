@@ -1,7 +1,7 @@
 /**
  * 📦 Entité Order (Commande)
  * ────────────────────────
- * Avec coordonnées GPS réelles pour pickup et dropoff.
+ * Compatible PostgreSQL + SQLite.
  */
 
 import {
@@ -85,7 +85,7 @@ export class Order {
   serviceEmoji: string;
 
   // ─── Lieu de récupération ────────────────────
-  @ApiProperty({ description: 'Label court (ex: Maison)' })
+  @ApiProperty({ description: 'Label court' })
   @Column({ type: 'varchar', length: 100, default: '' })
   pickupLabel: string;
 
@@ -106,7 +106,7 @@ export class Order {
   pickupPhone: string;
 
   // ─── Lieu de livraison ───────────────────────
-  @ApiProperty({ description: 'Label court (ex: Bureau)' })
+  @ApiProperty({ description: 'Label court' })
   @Column({ type: 'varchar', length: 100, default: '' })
   dropoffLabel: string;
 
@@ -163,7 +163,7 @@ export class Order {
   courierLng?: number;
 
   @ApiProperty({ description: 'Dernière mise à jour position', required: false })
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   courierLastUpdate?: Date;
 
   // ─── Timestamps ─────────────────────────────
@@ -176,14 +176,14 @@ export class Order {
   updatedAt: Date;
 
   @ApiProperty({ description: 'Date d\'acceptation', required: false })
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   acceptedAt?: Date;
 
   @ApiProperty({ description: 'Date de livraison', required: false })
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   deliveredAt?: Date;
 
   @ApiProperty({ description: 'Date d\'annulation', required: false })
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   cancelledAt?: Date;
 }
