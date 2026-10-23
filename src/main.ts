@@ -31,12 +31,18 @@ async function bootstrap() {
   const corsOrigin = configService.get<string>('cors.origin') || '*';
 
   // ─── CORS ───────────────────────────────────
-  app.enableCors({
+  // ─── CORS ───────────────────────────────────
+app.enableCors({
   origin: [
-    'https://ms-express-admin-delta.vercel.app/login',
-    'http://localhost:5174', // Pour tester en local
+    'https://ms-express-admin-delta.vercel.app', 
+    'https://ms-express-admin-b1pjv3w4f-abdoul-latif.vercel.app',            
+    'http://localhost:5173',                     
+    'http://localhost:5174',                     
+    'http://localhost:8081',                    
   ],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
 });
   app.useGlobalFilters(new AllExceptionsFilter());
   
