@@ -8,6 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
+import { KeepAliveModule } from 'nestjs-keep-alive';
 
 import configuration from './config/configuration';
 import { getJwtConfig } from './config/jwt.config';
@@ -64,6 +65,12 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) =>
         getJwtConfig(configService),
+    }),
+
+    // ─── Keep Alive (Anti-veille Render) ──────
+    KeepAliveModule.forRoot({
+      intervalMs: 10 * 60 * 1000, // Ping toutes les 10 minutes
+      enabled: process.env.NODE_ENV === 'production', // Uniquement en prod
     }),
 
     // ─── Modules métier ───────────────────────
