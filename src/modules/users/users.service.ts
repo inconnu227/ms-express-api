@@ -2,7 +2,12 @@
  * 👤 Service Users
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Not } from 'typeorm';
 import { UsersRepository } from './users.repository';
 import { User, UserRole } from './user.entity';
@@ -76,11 +81,20 @@ export class UsersService {
   }
 
   async setOnline(userId: string, isOnline: boolean): Promise<User> {
-    await this.findById(userId);
+    const user = await this.findById(userId);
+    
+    // 🛑 VÉRIFICATION : Si le livreur veut passer en ligne mais n'est pas approuvé
+    if (isOnline && user.role === UserRole.COURIER && !user.isApproved) {
+      throw new ForbiddenException(
+        'Votre compte est en attente de validation par un administrateur.',
+      );
+    }
+
     const updated = await this.usersRepo.update(userId, {
       isOnline,
       lastSeenAt: new Date(),
     });
+    
     if (!updated) {
       throw new NotFoundException('Utilisateur introuvable');
     }
@@ -93,14 +107,12 @@ export class UsersService {
         role: UserRole.COURIER,
         isActive: true,
         isOnline: true,
+        isApproved: true, // Uniquement les approuvés
       },
       order: { rating: 'DESC' },
     });
   }
 
-  /**
-   * Enregistrer le token push Expo
-   */
   async savePushToken(userId: string, token: string): Promise<User> {
     await this.findById(userId);
     const updated = await this.usersRepo.update(userId, {
@@ -111,5 +123,15 @@ export class UsersService {
       throw new NotFoundException('Utilisateur introuvable');
     }
     return updated;
+  }
+
+  // ─── NOUVELLE MÉTHODE : Approuver un livreur ───
+  async approveCourier(userId: string): Promise<User> {
+    const user = await this.findById(userId);
+    if (user.role !== UserRole.COURIER) {
+      throw new BadRequestException('Cet utilisateur n\'est pas un livreur');
+    }
+    const updated = await this.usersRepo.update(userId, { isApproved: true });
+    return updated as User;
   }
 }

@@ -1,7 +1,7 @@
 /**
  * 📦 Service Orders
  * ────────────────
- * Logique métier des commandes + simulation position livreur.
+ * Logique métier des commandes + Notifications Push.
  */
 
 import {
@@ -13,51 +13,27 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 
 import { Order, OrderStatus, PaymentMethod } from './order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { UpdateCourierPositionDto } from './dto/update-courier-position.dto';
 import { User, UserRole } from '../users/user.entity';
+import { UsersRepository } from '../users/users.repository'; // ⬅️ Ajouté
 import { CommissionsService } from '../commissions/commissions.service';
 import { calculatePrice } from '../../common/utils/pricing';
-
-// ─── Coordonnées par défaut (Niamey) ────────────
-const DEFAULT_CENTER = { lat: 13.5116, lng: 2.1254 };
-
-// ─── Hash stable pour position ──────────────────
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
-
-function getCoordinateFromAddress(
-  address: string,
-  center = DEFAULT_CENTER,
-  maxOffset = 0.045,
-) {
-  if (!address?.trim()) return center;
-  const hash = hashString(address.toLowerCase().trim());
-  const latOffset = ((hash % 1000) / 1000 - 0.5) * 2 * maxOffset;
-  const lngOffset = (((hash >> 10) % 1000) / 1000 - 0.5) * 2 * maxOffset;
-  return {
-    lat: center.lat + latOffset,
-    lng: center.lng + lngOffset,
-  };
-}
 
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
+  private expo = new Expo(); // ⬅️ Instance Expo pour les notifications
 
   constructor(
     @InjectRepository(Order)
     private readonly ordersRepo: Repository<Order>,
     private readonly commissionsService: CommissionsService,
+    private readonly usersRepo: UsersRepository, // ⬅️ Injecté pour trouver les livreurs
   ) {}
 
   // ─── Helpers ────────────────────────────────
@@ -79,8 +55,6 @@ export class OrdersService {
     return map[type] || { title: type, emoji: '📦' };
   }
 
-  
-
   // ─── Créer une commande ─────────────────────
   async create(client: User, dto: CreateOrderDto): Promise<Order> {
     const meta = this.getServiceMeta(dto.serviceType);
@@ -88,30 +62,72 @@ export class OrdersService {
     const price = calculatePrice(distance);
 
     const order = this.ordersRepo.create({
-  reference: this.generateReference(),
-  clientId: client.id,
-  serviceType: dto.serviceType,
-  serviceTitle: meta.title,
-  serviceEmoji: meta.emoji,
-  pickupLabel: dto.pickupLabel,
-  pickupAddress: dto.pickupAddress,
-  pickupLat: dto.pickupLat,
-  pickupLng: dto.pickupLng,
-  pickupPhone: dto.pickupPhone,
-  dropoffLabel: dto.dropoffLabel,
-  dropoffAddress: dto.dropoffAddress,
-  dropoffLat: dto.dropoffLat,
-  dropoffLng: dto.dropoffLng,
-  dropoffPhone: dto.dropoffPhone,
-  notes: dto.notes,
-  distance,
-  totalPrice: price,
-  paymentMethod: dto.paymentMethod || PaymentMethod.MOBILE_MONEY,
-  status: OrderStatus.SEARCHING,
-});
+      reference: this.generateReference(),
+      clientId: client.id,
+      serviceType: dto.serviceType,
+      serviceTitle: meta.title,
+      serviceEmoji: meta.emoji,
+      pickupLabel: dto.pickupLabel,
+      pickupAddress: dto.pickupAddress,
+      pickupLat: dto.pickupLat,
+      pickupLng: dto.pickupLng,
+      pickupPhone: dto.pickupPhone,
+      dropoffLabel: dto.dropoffLabel,
+      dropoffAddress: dto.dropoffAddress,
+      dropoffLat: dto.dropoffLat,
+      dropoffLng: dto.dropoffLng,
+      dropoffPhone: dto.dropoffPhone,
+      notes: dto.notes,
+      distance,
+      totalPrice: price,
+      paymentMethod: dto.paymentMethod || PaymentMethod.MOBILE_MONEY,
+      status: OrderStatus.SEARCHING,
+    });
 
     const saved = await this.ordersRepo.save(order);
     this.logger.log(`📦 Commande créée : ${saved.reference}`);
+
+    // 📲 NOTIFICATION PUSH AUX LIVREURS EN LIGNE
+    try {
+      const couriers = await this.usersRepo.findAll({
+        where: {
+          role: UserRole.COURIER,
+          isOnline: true,
+          isApproved: true, // Uniquement les livreurs approuvés
+        },
+      });
+
+      const pushMessages: ExpoPushMessage[] = [];
+
+      for (const courier of couriers) {
+        if (
+          courier.expoPushToken &&
+          Expo.isExpoPushToken(courier.expoPushToken)
+        ) {
+          pushMessages.push({
+            to: courier.expoPushToken,
+            sound: 'default',
+            title: '📦 Nouvelle course disponible !',
+            body: `Distance: ${distance} km • Prix: ${price.toLocaleString(
+              'fr-FR',
+            )} FCFA`,
+            data: { type: 'new_order', orderId: saved.id },
+            priority: 'high',
+            channelId: 'orders', // Canal Android
+          });
+        }
+      }
+
+      if (pushMessages.length > 0) {
+        await this.expo.sendPushNotificationsAsync(pushMessages);
+        this.logger.log(
+          `📲 Notifications envoyées à ${pushMessages.length} livreur(s)`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('❌ Erreur envoi notifications push :', error);
+    }
+
     return saved;
   }
 
@@ -231,11 +247,11 @@ export class OrdersService {
       );
     }
 
-        order.courierId = courierId || user.id;
+    order.courierId = courierId || user.id;
     order.status = OrderStatus.ACCEPTED;
     order.acceptedAt = new Date();
 
-    // Position initiale = position du pickup (le livreur devra se déplacer)
+    // Position initiale = position du pickup
     order.courierLat = order.pickupLat;
     order.courierLng = order.pickupLng;
     order.courierLastUpdate = new Date();
@@ -267,9 +283,6 @@ export class OrdersService {
 
   // ═══ POSITION LIVE DU LIVREUR ═══════════════
 
-  /**
-   * Le livreur envoie sa position (ou simulation côté backend)
-   */
   async updateCourierPosition(
     id: string,
     dto: UpdateCourierPositionDto,
@@ -288,10 +301,7 @@ export class OrdersService {
     return this.ordersRepo.save(order);
   }
 
-  /**
-   * Le client récupère la position du livreur (avec simulation temps réel)
-   */
-    async getCourierPosition(
+  async getCourierPosition(
     id: string,
     user: User,
   ): Promise<{
@@ -306,9 +316,7 @@ export class OrdersService {
       throw new BadRequestException('Aucun livreur assigné');
     }
 
-    // Retourner la vraie position du livreur (mise à jour par le livreur)
     if (!order.courierLat || !order.courierLng) {
-      // Fallback : position du pickup
       return {
         lat: order.pickupLat || 13.5116,
         lng: order.pickupLng || 2.1254,

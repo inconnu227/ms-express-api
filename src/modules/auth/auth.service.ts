@@ -1,7 +1,5 @@
 /**
  * 🔐 Service Auth
- * ─────────────
- * Logique d'inscription, connexion, JWT.
  */
 
 import {
@@ -32,9 +30,6 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  /**
-   * Inscription d'un client
-   */
   async register(dto: RegisterDto): Promise<{
     user: User;
     accessToken: string;
@@ -61,6 +56,7 @@ export class AuthService {
       email: dto.email,
       password: hashedPassword,
       role: UserRole.CLIENT,
+      isApproved: true, // Les clients sont approuvés d'office
     });
 
     this.logger.log(`✅ Nouveau client créé : ${user.phone}`);
@@ -73,9 +69,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Inscription d'un livreur
-   */
   async registerCourier(dto: RegisterCourierDto): Promise<{
     user: User;
     accessToken: string;
@@ -105,9 +98,10 @@ export class AuthService {
       vehicleType: dto.vehicleType,
       vehiclePlate: dto.vehiclePlate,
       isOnline: false,
+      isApproved: false, // 🛑 Le livreur doit être approuvé par l'admin
     });
 
-    this.logger.log(`✅ Nouveau livreur créé : ${user.phone}`);
+    this.logger.log(`✅ Nouveau livreur créé (en attente) : ${user.phone}`);
 
     const tokens = await this.generateTokens(user);
 
@@ -117,9 +111,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Connexion utilisateur (client ou livreur)
-   */
   async login(dto: LoginDto): Promise<{
     user: User;
     accessToken: string;
@@ -149,9 +140,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Rafraîchir les tokens
-   */
   async refresh(refreshToken: string): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -172,14 +160,10 @@ export class AuthService {
     }
   }
 
-  /**
-   * Valider un utilisateur (utilisé par JwtStrategy)
-   */
   async validateUser(userId: string): Promise<User | null> {
     return this.usersRepo.findById(userId);
   }
 
-  // ─── Helpers privés ─────────────────────────
   private async generateTokens(
     user: User,
   ): Promise<{ accessToken: string; refreshToken: string }> {

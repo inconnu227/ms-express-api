@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Query,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,7 +26,6 @@ import { User, UserRole } from './user.entity';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // ─── Mon profil ─────────────────────────────
   @Get('me')
   @ApiOperation({ summary: 'Mon profil' })
   @ApiResponse({ status: 200, type: User })
@@ -43,7 +43,6 @@ export class UsersController {
     return this.usersService.updateProfile(user.id, dto);
   }
 
-  // ─── Statut en ligne ────────────────────────
   @Patch('me/online')
   @ApiOperation({ summary: 'Activer/désactiver mon statut en ligne (livreur)' })
   @ApiResponse({ status: 200, type: User })
@@ -54,7 +53,6 @@ export class UsersController {
     return this.usersService.setOnline(user.id, dto.isOnline);
   }
 
-  // ─── Token push ─────────────────────────────
   @Patch('me/push-token')
   @ApiOperation({ summary: 'Enregistrer le token push Expo' })
   @ApiResponse({ status: 200, type: User })
@@ -65,7 +63,6 @@ export class UsersController {
     return this.usersService.savePushToken(user.id, token);
   }
 
-  // ─── Livreurs ────────────────────────────────
   @Get('couriers')
   @ApiOperation({ summary: 'Lister les livreurs (mobile client)' })
   async listCouriers(@CurrentUser() user: User): Promise<User[]> {
@@ -78,7 +75,6 @@ export class UsersController {
     return this.usersService.findAvailableCouriers();
   }
 
-  // ─── Admin ──────────────────────────────────
   @Get()
   @ApiOperation({ summary: 'Lister tous les utilisateurs (admin)' })
   async listAll(
@@ -87,9 +83,23 @@ export class UsersController {
     @Query('search') search?: string,
   ): Promise<User[]> {
     if (user.role !== UserRole.ADMIN) {
-      throw new Error('Accès réservé aux administrateurs');
+      throw new ForbiddenException('Accès réservé aux administrateurs');
     }
     return this.usersService.findAll({ role, search });
+  }
+
+  // ─── NOUVELLE ROUTE : Approuver un livreur ───
+  @Patch(':id/approve')
+  @ApiOperation({ summary: 'Approuver un livreur (admin)' })
+  @ApiResponse({ status: 200, type: User })
+  async approveCourier(
+    @Param('id') id: string,
+    @CurrentUser() admin: User,
+  ): Promise<User> {
+    if (admin.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Accès réservé aux administrateurs');
+    }
+    return this.usersService.approveCourier(id);
   }
 
   @Get(':id')
@@ -99,7 +109,7 @@ export class UsersController {
     @CurrentUser() user: User,
   ): Promise<User> {
     if (user.role !== UserRole.ADMIN) {
-      throw new Error('Accès réservé aux administrateurs');
+      throw new ForbiddenException('Accès réservé aux administrateurs');
     }
     return this.usersService.findById(id);
   }

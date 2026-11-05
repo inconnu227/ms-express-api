@@ -5,11 +5,13 @@ import { Order } from './order.entity';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { CommissionsModule } from '../commissions/commissions.module';
+import { UsersModule } from '../users/users.module'; // ⬅️ AJOUTÉ
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order]),
-    CommissionsModule,  // ← ajoute
+    CommissionsModule,
+    UsersModule, // ⬅️ AJOUTÉ pour injecter UsersRepository
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

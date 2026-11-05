@@ -1,8 +1,5 @@
 /**
  * 👤 Entité User
- * ─────────────
- * Représente un utilisateur de MS Express.
- * Compatible PostgreSQL + SQLite.
  */
 
 import {
@@ -56,6 +53,11 @@ export class User {
   @ApiProperty({ description: 'Compte actif', default: true })
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
+
+  // ─── NOUVEAU CHAMP : Approbation ─────────────
+  @ApiProperty({ description: 'Compte approuvé par admin', default: false })
+  @Column({ type: 'boolean', default: false })
+  isApproved: boolean;
 
   @ApiProperty({ description: 'Note moyenne', example: 4.9, default: 5.0 })
   @Column({ type: 'float', default: 5.0 })
