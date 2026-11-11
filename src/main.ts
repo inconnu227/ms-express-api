@@ -16,14 +16,16 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { ClassSerializerInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
-  });
+ const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+  logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+});
 
   const configService = app.get(ConfigService);
   const port = process.env.PORT || 3000;
@@ -45,6 +47,10 @@ app.enableCors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
 });
   app.useGlobalFilters(new AllExceptionsFilter());
+    // Servir les fichiers statiques (uploads)
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+  });
   
   // ─── Préfixe global /api ────────────────────
   app.setGlobalPrefix(apiPrefix);

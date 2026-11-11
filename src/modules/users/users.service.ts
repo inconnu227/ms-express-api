@@ -134,4 +134,20 @@ export class UsersService {
     const updated = await this.usersRepo.update(userId, { isApproved: true });
     return updated as User;
   }
+
+    async saveKyc(
+    userId: string,
+    idCardUrl: string,
+    licenseUrl: string,
+  ): Promise<User> {
+    const updated = await this.usersRepo.update(userId, {
+      kycIdCardUrl: idCardUrl,
+      kycLicenseUrl: licenseUrl,
+      kycSubmittedAt: new Date(),
+    });
+    if (!updated) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+    return updated;
+  }
 }

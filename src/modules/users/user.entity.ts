@@ -59,6 +59,19 @@ export class User {
   @Column({ type: 'boolean', default: false })
   isApproved: boolean;
 
+    // ─── KYC Documents ──────────────────────────
+  @ApiProperty({ description: 'URL Photo CNI', required: false })
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  kycIdCardUrl?: string;
+
+  @ApiProperty({ description: 'URL Photo Permis', required: false })
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  kycLicenseUrl?: string;
+
+  @ApiProperty({ description: 'KYC soumis le', required: false })
+  @Column({ type: 'timestamp', nullable: true })
+  kycSubmittedAt?: Date;
+
   @ApiProperty({ description: 'Note moyenne', example: 4.9, default: 5.0 })
   @Column({ type: 'float', default: 5.0 })
   rating: number;
@@ -71,6 +84,8 @@ export class User {
   @ApiProperty({ description: 'Livreur en ligne ?', default: false })
   @Column({ type: 'boolean', default: false })
   isOnline: boolean;
+
+
 
   @ApiProperty({ description: 'Dernière activité', required: false })
   @Column({ type: 'timestamp', nullable: true })

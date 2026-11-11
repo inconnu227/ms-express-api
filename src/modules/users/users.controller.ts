@@ -19,6 +19,15 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { SetOnlineDto } from './dto/set-online.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User, UserRole } from './user.entity';
+import {
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
+} from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from '../../config/multer.config';
+import { Express } from 'express';
+
 
 @ApiTags('Users')
 @ApiBearerAuth('access-token')
@@ -62,6 +71,40 @@ export class UsersController {
   ): Promise<User> {
     return this.usersService.savePushToken(user.id, token);
   }
+
+   @Patch('me/kyc')
+  @ApiOperation({ summary: 'Uploader les documents KYC (livreur)' })
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'idCard', maxCount: 1 },
+        { name: 'license', maxCount: 1 },
+      ],
+      multerConfig,
+    ),
+  )
+  async uploadKyc(
+    @CurrentUser() user: User,
+    @UploadedFiles()
+    files: {
+      idCard?: Express.Multer.File[];
+      license?: Express.Multer.File[];
+    },
+  ): Promise<User> {
+    if (!files?.idCard?.[0] || !files?.license?.[0]) {
+      throw new BadRequestException(
+        'La CNI et le Permis sont obligatoires.',
+      );
+    }
+
+    // Construire les URLs publiques des fichiers
+    const baseUrl = process.env.BASE_URL || 'https://ms-express-api.onrender.com';
+    const idCardUrl = `${baseUrl}/uploads/kyc/${files.idCard[0].filename}`;
+    const licenseUrl = `${baseUrl}/uploads/kyc/${files.license[0].filename}`;
+
+    return this.usersService.saveKyc(user.id, idCardUrl, licenseUrl);
+  }
+
 
   @Get('couriers')
   @ApiOperation({ summary: 'Lister les livreurs (mobile client)' })
